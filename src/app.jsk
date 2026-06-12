@@ -1,367 +1,257 @@
 import { useState } from "react";
 
-const CATEGORIES = ["Food", "Transport", "Shopping", "Bills", "Health", "Education", "Entertainment", "Other"];
-
-const formatBDT = (amount) => `৳${Number(amount).toLocaleString("en-BD", { minimumFractionDigits: 2 })}`;
+const CATS = ["Food","Transport","Shopping","Bills","Health","Education","Entertainment","Other"];
+const fmt = (n) => `৳${Number(n).toLocaleString("en-BD",{minimumFractionDigits:2})}`;
 
 export default function App() {
+  const [tab, setTab] = useState("home");
   const [savings, setSavings] = useState([]);
-  const [spendings, setSpendings] = useState([]);
-  const [activeTab, setActiveTab] = useState("home");
-  const [showAddSaving, setShowAddSaving] = useState(false);
-  const [showAddSpend, setShowAddSpend] = useState(false);
-  const [editSpend, setEditSpend] = useState(null);
-  const [saveAmount, setSaveAmount] = useState("");
-  const [saveNote, setSaveNote] = useState("");
-  const [spendAmount, setSpendAmount] = useState("");
-  const [spendNote, setSpendNote] = useState("");
-  const [spendCategory, setSpendCategory] = useState("Food");
+  const [spends, setSpends] = useState([]);
+  const [showSave, setShowSave] = useState(false);
+  const [showSpend, setShowSpend] = useState(false);
+  const [editItem, setEditItem] = useState(null);
+  const [amt, setAmt] = useState("");
+  const [note, setNote] = useState("");
+  const [cat, setCat] = useState("Food");
 
-  const totalSaved = savings.reduce((s, i) => s + i.amount, 0);
-  const totalSpent = spendings.reduce((s, i) => s + i.amount, 0);
-  const cardBalance = totalSaved - totalSpent;
+  const totalSaved = savings.reduce((a,i)=>a+i.amount,0);
+  const totalSpent = spends.reduce((a,i)=>a+i.amount,0);
+  const balance = totalSaved - totalSpent;
 
-  const spendByCategory = CATEGORIES.map((cat) => ({
-    cat,
-    total: spendings.filter((s) => s.category === cat).reduce((a, s) => a + s.amount, 0),
-  })).filter((c) => c.total > 0);
-
-  const handleAddSaving = () => {
-    const amt = parseFloat(saveAmount);
-    if (!amt || amt <= 0) return;
-    setSavings([{ id: Date.now(), amount: amt, note: saveNote, date: new Date().toLocaleDateString("en-BD") }, ...savings]);
-    setSaveAmount(""); setSaveNote(""); setShowAddSaving(false);
+  const addSaving = () => {
+    const a = parseFloat(amt);
+    if(!a||a<=0) return;
+    setSavings([{id:Date.now(),amount:a,note,date:new Date().toLocaleDateString()}, ...savings]);
+    setAmt(""); setNote(""); setShowSave(false);
   };
 
-  const handleAddSpend = () => {
-    const amt = parseFloat(spendAmount);
-    if (!amt || amt <= 0) return;
-    setSpendings([{ id: Date.now(), amount: amt, note: spendNote, category: spendCategory, date: new Date().toLocaleDateString("en-BD") }, ...spendings]);
-    setSpendAmount(""); setSpendNote(""); setSpendCategory("Food"); setShowAddSpend(false);
+  const addSpend = () => {
+    const a = parseFloat(amt);
+    if(!a||a<=0) return;
+    setSpends([{id:Date.now(),amount:a,note,cat,date:new Date().toLocaleDateString()}, ...spends]);
+    setAmt(""); setNote(""); setCat("Food"); setShowSpend(false);
   };
 
-  const handleEditSpend = () => {
-    const amt = parseFloat(spendAmount);
-    if (!amt || amt <= 0) return;
-    setSpendings(spendings.map(s => s.id === editSpend.id ? { ...s, amount: amt, note: spendNote, category: spendCategory } : s));
-    setEditSpend(null); setSpendAmount(""); setSpendNote(""); setSpendCategory("Food");
+  const updateSpend = () => {
+    const a = parseFloat(amt);
+    if(!a||a<=0) return;
+    setSpends(spends.map(s=>s.id===editItem.id?{...s,amount:a,note,cat}:s));
+    setEditItem(null); setAmt(""); setNote(""); setCat("Food");
   };
 
-  const handleDeleteSpend = (id) => setSpendings(spendings.filter(s => s.id !== id));
+  const deleteSpend = (id) => setSpends(spends.filter(s=>s.id!==id));
 
-  const openEditSpend = (sp) => {
-    setEditSpend(sp); setSpendAmount(String(sp.amount)); setSpendNote(sp.note); setSpendCategory(sp.category);
-  };
+  const openEdit = (s) => { setEditItem(s); setAmt(String(s.amount)); setNote(s.note); setCat(s.cat); };
+
+  const recent = [...savings.map(s=>({...s,type:"save"})), ...spends.map(s=>({...s,type:"spend"}))]
+    .sort((a,b)=>b.id-a.id).slice(0,10);
+
+  const byCat = CATS.map(c=>({c,t:spends.filter(s=>s.cat===c).reduce((a,s)=>a+s.amount,0)})).filter(x=>x.t>0);
+  const maxCat = Math.max(...byCat.map(x=>x.t),1);
+
+  const S = styles;
 
   return (
-    <div style={styles.root}>
-      <div style={styles.header}>
-        <div style={styles.headerLogo}>💰</div>
+    <div style={S.root}>
+      <div style={S.header}>
+        <span style={{fontSize:28}}>💰</span>
         <div>
-          <div style={styles.headerTitle}>Fuad Money</div>
-          <div style={styles.headerSub}>Management</div>
+          <div style={S.htitle}>Fuad Money</div>
+          <div style={S.hsub}>Management</div>
         </div>
       </div>
 
-      <div style={styles.tabBar}>
-        {[["home","Home","🏠"],["card","Card","💳"],["stats","Stats","📊"]].map(([key,label,icon]) => (
-          <button key={key} onClick={() => setActiveTab(key)} style={{...styles.tabBtn, ...(activeTab===key ? styles.tabActive : {})}}>
-            <span>{icon}</span><span style={{fontSize:11,marginTop:2}}>{label}</span>
+      <div style={S.tabs}>
+        {[["home","🏠","Home"],["card","💳","Card"],["stats","📊","Stats"]].map(([k,icon,label])=>(
+          <button key={k} onClick={()=>setTab(k)} style={{...S.tab,...(tab===k?S.tabOn:{})}}>
+            <span>{icon}</span><span style={{fontSize:11}}>{label}</span>
           </button>
         ))}
       </div>
 
-      <div style={styles.content}>
-        {activeTab === "home" && <HomeTab cardBalance={cardBalance} totalSaved={totalSaved} totalSpent={totalSpent} savings={savings} spendings={spendings} onAddSaving={() => setShowAddSaving(true)} onAddSpend={() => setShowAddSpend(true)} onEditSpend={openEditSpend} onDeleteSpend={handleDeleteSpend} />}
-        {activeTab === "card" && <CardTab cardBalance={cardBalance} totalSaved={totalSaved} totalSpent={totalSpent} />}
-        {activeTab === "stats" && <StatsTab spendings={spendings} savings={savings} spendByCategory={spendByCategory} totalSpent={totalSpent} totalSaved={totalSaved} />}
-      </div>
-
-      {showAddSaving && (
-        <Modal title="Add Savings" onClose={() => setShowAddSaving(false)}>
-          <input style={styles.input} type="number" placeholder="Amount (৳)" value={saveAmount} onChange={e => setSaveAmount(e.target.value)} />
-          <input style={styles.input} type="text" placeholder="Note (optional)" value={saveNote} onChange={e => setSaveNote(e.target.value)} />
-          <button style={styles.btnGreen} onClick={handleAddSaving}>Save Money</button>
-        </Modal>
-      )}
-      {showAddSpend && (
-        <Modal title="Add Spending" onClose={() => setShowAddSpend(false)}>
-          <input style={styles.input} type="number" placeholder="Amount (৳)" value={spendAmount} onChange={e => setSpendAmount(e.target.value)} />
-          <input style={styles.input} type="text" placeholder="Note (optional)" value={spendNote} onChange={e => setSpendNote(e.target.value)} />
-          <select style={styles.input} value={spendCategory} onChange={e => setSpendCategory(e.target.value)}>
-            {CATEGORIES.map(c => <option key={c}>{c}</option>)}
-          </select>
-          <button style={styles.btnRed} onClick={handleAddSpend}>Record Spending</button>
-        </Modal>
-      )}
-      {editSpend && (
-        <Modal title="Edit Spending" onClose={() => setEditSpend(null)}>
-          <input style={styles.input} type="number" placeholder="Amount (৳)" value={spendAmount} onChange={e => setSpendAmount(e.target.value)} />
-          <input style={styles.input} type="text" placeholder="Note" value={spendNote} onChange={e => setSpendNote(e.target.value)} />
-          <select style={styles.input} value={spendCategory} onChange={e => setSpendCategory(e.target.value)}>
-            {CATEGORIES.map(c => <option key={c}>{c}</option>)}
-          </select>
-          <button style={styles.btnGreen} onClick={handleEditSpend}>Update</button>
-        </Modal>
-      )}
-    </div>
-  );
-}
-
-function HomeTab({ cardBalance, totalSaved, totalSpent, savings, spendings, onAddSaving, onAddSpend, onEditSpend, onDeleteSpend }) {
-  const recentAll = [
-    ...savings.map(s => ({ ...s, type: "save" })),
-    ...spendings.map(s => ({ ...s, type: "spend" }))
-  ].sort((a, b) => b.id - a.id).slice(0, 10);
-
-  return (
-    <div>
-      <div style={styles.balanceCard}>
-        <div style={styles.balanceLabelTop}>Available Balance</div>
-        <div style={styles.balanceAmount}>{formatBDT(cardBalance)}</div>
-        <div style={styles.balanceRow}>
-          <div style={styles.balanceStat}>
-            <span style={{color:"#4ade80",fontSize:12}}>↑ Saved</span>
-            <span style={{color:"#fff",fontWeight:700}}>{formatBDT(totalSaved)}</span>
-          </div>
-          <div style={{width:1,background:"rgba(255,255,255,0.2)",margin:"0 12px"}} />
-          <div style={styles.balanceStat}>
-            <span style={{color:"#f87171",fontSize:12}}>↓ Spent</span>
-            <span style={{color:"#fff",fontWeight:700}}>{formatBDT(totalSpent)}</span>
-          </div>
-        </div>
-      </div>
-      <div style={styles.actionRow}>
-        <button style={styles.actionBtnGreen} onClick={onAddSaving}>
-          <span style={{fontSize:22}}>+</span>
-          <span style={{fontSize:13,fontWeight:700}}>Add Savings</span>
-        </button>
-        <button style={styles.actionBtnRed} onClick={onAddSpend}>
-          <span style={{fontSize:22}}>-</span>
-          <span style={{fontSize:13,fontWeight:700}}>Add Spend</span>
-        </button>
-      </div>
-      <div style={styles.sectionTitle}>Recent Transactions</div>
-      {recentAll.length === 0 && <div style={styles.empty}>No transactions yet. Start by adding savings!</div>}
-      {recentAll.map(item => (
-        <div key={item.id} style={styles.txRow}>
-          <div style={{...styles.txIcon, background: item.type==="save" ? "#14532d" : "#450a0a"}}>
-            {item.type === "save" ? "💰" : "💸"}
-          </div>
-          <div style={{flex:1}}>
-            <div style={styles.txLabel}>{item.note || (item.type==="save" ? "Savings" : item.category)}</div>
-            <div style={styles.txMeta}>{item.date}{item.category ? ` · ${item.category}` : ""}</div>
-          </div>
-          <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4}}>
-            <div style={{color: item.type==="save" ? "#4ade80" : "#f87171", fontWeight:700, fontSize:15}}>
-              {item.type==="save" ? "+" : "-"}{formatBDT(item.amount)}
-            </div>
-            {item.type === "spend" && (
-              <div style={{display:"flex",gap:6}}>
-                <button onClick={() => onEditSpend(item)} style={styles.microBtn}>✏️</button>
-                <button onClick={() => onDeleteSpend(item.id)} style={styles.microBtnRed}>🗑</button>
-              </div>
-            )}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function CardTab({ cardBalance, totalSaved, totalSpent }) {
-  const cardNumber = "4170  3310  1165  3701";
-  const holder = "NAFEES FUAD";
-  const expiry = "05/31";
-
-  return (
-    <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:24,paddingTop:8}}>
-      <div style={cardStyles.card}>
-        <div style={cardStyles.bgBlack} />
-        <div style={cardStyles.bgGreenFan} />
-        <div style={cardStyles.bgGlow} />
-        <div style={cardStyles.bankRow}>
-          <div style={cardStyles.bankIcon}>🏦</div>
+      <div style={S.body}>
+        {tab==="home" && (
           <div>
-            <div style={cardStyles.bankName}>Islami Bank</div>
-            <div style={cardStyles.bankSub}>Bangladesh PLC.</div>
+            <div style={S.balCard}>
+              <div style={{color:"rgba(255,255,255,0.5)",fontSize:12}}>Available Balance</div>
+              <div style={{fontSize:34,fontWeight:900,color:"#fff",margin:"4px 0 16px",letterSpacing:-1}}>{fmt(balance)}</div>
+              <div style={{display:"flex",alignItems:"center"}}>
+                <div style={{display:"flex",flexDirection:"column",gap:2}}>
+                  <span style={{color:"#4ade80",fontSize:12}}>↑ Saved</span>
+                  <span style={{color:"#fff",fontWeight:700}}>{fmt(totalSaved)}</span>
+                </div>
+                <div style={{width:1,background:"rgba(255,255,255,0.2)",margin:"0 12px",height:32}}/>
+                <div style={{display:"flex",flexDirection:"column",gap:2}}>
+                  <span style={{color:"#f87171",fontSize:12}}>↓ Spent</span>
+                  <span style={{color:"#fff",fontWeight:700}}>{fmt(totalSpent)}</span>
+                </div>
+              </div>
+            </div>
+            <div style={{display:"flex",gap:12,marginBottom:20}}>
+              <button style={S.btnG} onClick={()=>setShowSave(true)}><span style={{fontSize:22}}>+</span><span>Add Savings</span></button>
+              <button style={S.btnR} onClick={()=>setShowSpend(true)}><span style={{fontSize:22}}>-</span><span>Add Spend</span></button>
+            </div>
+            <div style={S.secTitle}>Recent Transactions</div>
+            {recent.length===0 && <div style={{color:"#4b5563",textAlign:"center",padding:"24px 0"}}>No transactions yet!</div>}
+            {recent.map(item=>(
+              <div key={item.id} style={S.txRow}>
+                <div style={{...S.txIcon,background:item.type==="save"?"#14532d":"#450a0a"}}>
+                  {item.type==="save"?"💰":"💸"}
+                </div>
+                <div style={{flex:1}}>
+                  <div style={{color:"#f9fafb",fontSize:14,fontWeight:600}}>{item.note||(item.type==="save"?"Savings":item.cat)}</div>
+                  <div style={{color:"#6b7280",fontSize:12}}>{item.date}{item.cat?" · "+item.cat:""}</div>
+                </div>
+                <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4}}>
+                  <div style={{color:item.type==="save"?"#4ade80":"#f87171",fontWeight:700}}>
+                    {item.type==="save"?"+":"-"}{fmt(item.amount)}
+                  </div>
+                  {item.type==="spend" && (
+                    <div style={{display:"flex",gap:6}}>
+                      <button onClick={()=>openEdit(item)} style={S.micro}>✏️</button>
+                      <button onClick={()=>deleteSpend(item.id)} style={S.microR}>🗑</button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
-        <div style={cardStyles.chipRow}>
-          <div style={cardStyles.chip}>
-            <div style={cardStyles.chipInner} />
+        )}
+
+        {tab==="card" && (
+          <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:20}}>
+            <div style={S.card}>
+              <div style={S.cardBg}/>
+              <div style={S.cardFan}/>
+              <div style={{position:"absolute",top:14,right:14,display:"flex",alignItems:"center",gap:6,zIndex:2}}>
+                <span style={{fontSize:18}}>🏦</span>
+                <div>
+                  <div style={{color:"#fff",fontSize:13,fontWeight:700}}>Islami Bank</div>
+                  <div style={{color:"rgba(255,255,255,0.5)",fontSize:8}}>Bangladesh PLC.</div>
+                </div>
+              </div>
+              <div style={{position:"absolute",top:52,left:16,display:"flex",alignItems:"center",gap:10,zIndex:2}}>
+                <div style={S.chip}><div style={S.chipIn}/></div>
+                <span style={{color:"rgba(255,255,255,0.6)",fontSize:20}}>))))</span>
+              </div>
+              <div style={{position:"absolute",bottom:60,left:16,color:"#fff",fontSize:16,fontWeight:700,letterSpacing:2,zIndex:2,fontFamily:"monospace"}}>
+                4170  3310  1165  3701
+              </div>
+              <div style={{position:"absolute",bottom:30,left:16,zIndex:2,display:"flex",gap:16}}>
+                <div>
+                  <div style={{color:"rgba(255,255,255,0.45)",fontSize:7}}>VALID FROM</div>
+                </div>
+                <div>
+                  <div style={{color:"rgba(255,255,255,0.45)",fontSize:7}}>VALID THRU</div>
+                  <div style={{color:"#fff",fontSize:13,fontWeight:700}}>05/31</div>
+                </div>
+              </div>
+              <div style={{position:"absolute",bottom:12,left:16,right:16,display:"flex",justifyContent:"space-between",alignItems:"center",zIndex:2}}>
+                <div style={{color:"#fff",fontSize:12,fontWeight:600,letterSpacing:1.5}}>NAFEES FUAD</div>
+                <div style={{color:"#fff",fontSize:22,fontWeight:900,fontFamily:"serif",fontStyle:"italic"}}>VISA</div>
+              </div>
+            </div>
+            <div style={{background:"#0f172a",border:"1px solid #1f2937",borderRadius:14,padding:"16px 20px",width:"100%",textAlign:"center",boxSizing:"border-box"}}>
+              <div style={{color:"#9ca3af",fontSize:13}}>Card Balance</div>
+              <div style={{color:"#fff",fontSize:28,fontWeight:800}}>{fmt(balance)}</div>
+              <div style={{color:"#6b7280",fontSize:12,marginTop:4}}>Based on savings & spendings</div>
+            </div>
+            <div style={{display:"flex",gap:16,width:"100%"}}>
+              <div style={S.mini}><div style={{color:"#4ade80",fontSize:13}}>Total Saved</div><div style={{color:"#fff",fontSize:18,fontWeight:700}}>{fmt(totalSaved)}</div></div>
+              <div style={S.mini}><div style={{color:"#f87171",fontSize:13}}>Total Spent</div><div style={{color:"#fff",fontSize:18,fontWeight:700}}>{fmt(totalSpent)}</div></div>
+            </div>
           </div>
-          <div style={cardStyles.nfc}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              {[6,10,14].map(r => (
-                <path key={r} d={`M${12-r/2} 12 Q12 ${12-r} ${12+r/2} 12`} stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-              ))}
-            </svg>
+        )}
+
+        {tab==="stats" && (
+          <div>
+            <div style={S.secTitle}>Spending Overview</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
+              <div style={S.statBox}><div style={{color:"#9ca3af",fontSize:12}}>Transactions</div><div style={{color:"#fff",fontSize:24,fontWeight:800}}>{spends.length}</div></div>
+              <div style={S.statBox}><div style={{color:"#9ca3af",fontSize:12}}>Avg Spend</div><div style={{color:"#fff",fontSize:18,fontWeight:800}}>{spends.length?fmt(totalSpent/spends.length):"৳0"}</div></div>
+              <div style={S.statBox}><div style={{color:"#9ca3af",fontSize:12}}>Savings Rate</div><div style={{color:"#4ade80",fontSize:20,fontWeight:800}}>{totalSaved?Math.round(((totalSaved-totalSpent)/totalSaved)*100):0}%</div></div>
+              <div style={S.statBox}><div style={{color:"#9ca3af",fontSize:12}}>Net Balance</div><div style={{color:balance>=0?"#4ade80":"#f87171",fontSize:18,fontWeight:800}}>{fmt(balance)}</div></div>
+            </div>
+            <div style={S.secTitle}>By Category</div>
+            {byCat.length===0 && <div style={{color:"#4b5563",textAlign:"center",padding:"16px 0"}}>No spending data yet.</div>}
+            {byCat.sort((a,b)=>b.t-a.t).map(({c,t})=>(
+              <div key={c} style={{marginBottom:12}}>
+                <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+                  <span style={{color:"#e5e7eb",fontSize:13}}>{c}</span>
+                  <span style={{color:"#f87171",fontSize:13,fontWeight:700}}>{fmt(t)}</span>
+                </div>
+                <div style={{height:8,background:"#1f2937",borderRadius:4,overflow:"hidden"}}>
+                  <div style={{height:"100%",background:"linear-gradient(90deg,#dc2626,#f87171)",borderRadius:4,width:`${(t/maxCat)*100}%`}}/>
+                </div>
+              </div>
+            ))}
+            <div style={S.secTitle}>Savings vs Spending</div>
+            <div style={{height:16,background:"#1f2937",borderRadius:8,overflow:"hidden",display:"flex"}}>
+              <div style={{background:"#16a34a",flex:totalSaved||1,borderRadius:"8px 0 0 8px"}}/>
+              <div style={{background:"#dc2626",flex:totalSpent||0.01,borderRadius:"0 8px 8px 0"}}/>
+            </div>
+            <div style={{display:"flex",justifyContent:"space-between",marginTop:6}}>
+              <span style={{color:"#4ade80",fontSize:12}}>● Saved {fmt(totalSaved)}</span>
+              <span style={{color:"#f87171",fontSize:12}}>● Spent {fmt(totalSpent)}</span>
+            </div>
           </div>
-        </div>
-        <div style={cardStyles.cardNum}>{cardNumber}</div>
-        <div style={cardStyles.expiryRow}>
-          <div><div style={cardStyles.expiryLabel}>VALID FROM</div></div>
-          <div style={{marginLeft:16}}>
-            <div style={cardStyles.expiryLabel}>VALID THRU</div>
-            <div style={cardStyles.expiryVal}>{expiry}</div>
-          </div>
-        </div>
-        <div style={cardStyles.holderRow}>
-          <div style={cardStyles.holder}>{holder}</div>
-          <div style={cardStyles.visa}>VISA</div>
-        </div>
+        )}
       </div>
-      <div style={styles.cardBalanceBox}>
-        <div style={{color:"#9ca3af",fontSize:13}}>Card Balance</div>
-        <div style={{color:"#fff",fontSize:28,fontWeight:800}}>{formatBDT(cardBalance)}</div>
-        <div style={{color:"#6b7280",fontSize:12,marginTop:4}}>Based on your savings & spendings</div>
-      </div>
-      <div style={{display:"flex",gap:16,width:"100%"}}>
-        <div style={styles.miniStat}>
-          <div style={{color:"#4ade80",fontSize:13}}>Total Saved</div>
-          <div style={{color:"#fff",fontSize:18,fontWeight:700}}>{formatBDT(totalSaved)}</div>
+
+      {(showSave||showSpend||editItem) && (
+        <div style={S.overlay} onClick={()=>{setShowSave(false);setShowSpend(false);setEditItem(null);}}>
+          <div style={S.modal} onClick={e=>e.stopPropagation()}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+              <span style={{color:"#fff",fontWeight:700,fontSize:17}}>
+                {showSave?"Add Savings":editItem?"Edit Spending":"Add Spending"}
+              </span>
+              <button onClick={()=>{setShowSave(false);setShowSpend(false);setEditItem(null);}} style={{background:"#1f2937",border:"none",color:"#9ca3af",borderRadius:8,padding:"6px 10px",cursor:"pointer"}}>✕</button>
+            </div>
+            <input style={S.inp} type="number" placeholder="Amount (৳)" value={amt} onChange={e=>setAmt(e.target.value)}/>
+            <input style={S.inp} type="text" placeholder="Note (optional)" value={note} onChange={e=>setNote(e.target.value)}/>
+            {(showSpend||editItem) && (
+              <select style={S.inp} value={cat} onChange={e=>setCat(e.target.value)}>
+                {CATS.map(c=><option key={c}>{c}</option>)}
+              </select>
+            )}
+            <button
+              style={{...S.inp,background:showSave?"#16a34a":"#dc2626",border:"none",color:"#fff",fontWeight:700,cursor:"pointer",marginBottom:0}}
+              onClick={showSave?addSaving:editItem?updateSpend:addSpend}
+            >
+              {showSave?"Save Money":editItem?"Update":"Record Spending"}
+            </button>
+          </div>
         </div>
-        <div style={styles.miniStat}>
-          <div style={{color:"#f87171",fontSize:13}}>Total Spent</div>
-          <div style={{color:"#fff",fontSize:18,fontWeight:700}}>{formatBDT(totalSpent)}</div>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
-
-function StatsTab({ spendings, savings, spendByCategory, totalSpent, totalSaved }) {
-  const maxCat = Math.max(...spendByCategory.map(c => c.total), 1);
-  return (
-    <div>
-      <div style={styles.sectionTitle}>Spending Overview</div>
-      <div style={styles.statsGrid}>
-        <div style={styles.statBox}>
-          <div style={{color:"#9ca3af",fontSize:12}}>Total Transactions</div>
-          <div style={{color:"#fff",fontSize:24,fontWeight:800}}>{spendings.length}</div>
-        </div>
-        <div style={styles.statBox}>
-          <div style={{color:"#9ca3af",fontSize:12}}>Avg per Spend</div>
-          <div style={{color:"#fff",fontSize:20,fontWeight:800}}>
-            {spendings.length ? formatBDT(totalSpent / spendings.length) : "৳0"}
-          </div>
-        </div>
-        <div style={styles.statBox}>
-          <div style={{color:"#9ca3af",fontSize:12}}>Savings Rate</div>
-          <div style={{color:"#4ade80",fontSize:20,fontWeight:800}}>
-            {totalSaved ? Math.round(((totalSaved - totalSpent) / totalSaved) * 100) : 0}%
-          </div>
-        </div>
-        <div style={styles.statBox}>
-          <div style={{color:"#9ca3af",fontSize:12}}>Net Balance</div>
-          <div style={{color: totalSaved-totalSpent >= 0 ? "#4ade80" : "#f87171", fontSize:18,fontWeight:800}}>
-            {formatBDT(totalSaved - totalSpent)}
-          </div>
-        </div>
-      </div>
-      <div style={styles.sectionTitle}>By Category</div>
-      {spendByCategory.length === 0 && <div style={styles.empty}>No spending data yet.</div>}
-      {spendByCategory.sort((a,b) => b.total - a.total).map(({ cat, total }) => (
-        <div key={cat} style={{marginBottom:12}}>
-          <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-            <span style={{color:"#e5e7eb",fontSize:13}}>{cat}</span>
-            <span style={{color:"#f87171",fontSize:13,fontWeight:700}}>{formatBDT(total)}</span>
-          </div>
-          <div style={styles.barBg}>
-            <div style={{...styles.barFill, width: `${(total/maxCat)*100}%`}} />
-          </div>
-        </div>
-      ))}
-      <div style={styles.sectionTitle}>Savings vs Spending</div>
-      <div style={styles.compareBar}>
-        <div style={{...styles.compareSegSave, flex: totalSaved || 1}} />
-        <div style={{...styles.compareSegSpend, flex: totalSpent || 0.01}} />
-      </div>
-      <div style={{display:"flex",justifyContent:"space-between",marginTop:6}}>
-        <span style={{color:"#4ade80",fontSize:12}}>● Saved {formatBDT(totalSaved)}</span>
-        <span style={{color:"#f87171",fontSize:12}}>● Spent {formatBDT(totalSpent)}</span>
-      </div>
-    </div>
-  );
-}
-
-function Modal({ title, onClose, children }) {
-  return (
-    <div style={styles.overlay} onClick={onClose}>
-      <div style={styles.modal} onClick={e => e.stopPropagation()}>
-        <div style={styles.modalHeader}>
-          <span style={{color:"#fff",fontWeight:700,fontSize:17}}>{title}</span>
-          <button onClick={onClose} style={styles.closeBtn}>✕</button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
-
-const cardStyles = {
-  card: { width:320, height:200, borderRadius:16, position:"relative", overflow:"hidden", boxShadow:"0 20px 60px rgba(0,0,0,0.7)" },
-  bgBlack: { position:"absolute", inset:0, background:"#0a0f0a" },
-  bgGreenFan: { position:"absolute", right:-20, top:-20, width:240, height:260, background:"radial-gradient(ellipse at 80% 30%, #16a34a 0%, #15803d 25%, #052e16 60%, transparent 80%)", transform:"rotate(-10deg)" },
-  bgGlow: { position:"absolute", right:40, top:10, width:160, height:160, background:"radial-gradient(circle, rgba(134,239,172,0.15) 0%, transparent 70%)" },
-  bankRow: { position:"absolute", top:14, right:14, display:"flex", alignItems:"center", gap:6, zIndex:2 },
-  bankIcon: { fontSize:18 },
-  bankName: { color:"#fff", fontSize:13, fontWeight:700, lineHeight:1.2 },
-  bankSub: { color:"rgba(255,255,255,0.5)", fontSize:8 },
-  chipRow: { position:"absolute", top:52, left:16, display:"flex", alignItems:"center", gap:10, zIndex:2 },
-  chip: { width:38, height:28, borderRadius:4, background:"linear-gradient(135deg,#d4a843 0%,#f5d078 40%,#c8962a 100%)", display:"flex", alignItems:"center", justifyContent:"center" },
-  chipInner: { width:28, height:20, borderRadius:2, border:"1px solid rgba(180,130,0,0.5)", background:"linear-gradient(135deg,#c8962a,#e8c060)" },
-  nfc: { color:"rgba(255,255,255,0.6)", marginLeft:4 },
-  cardNum: { position:"absolute", bottom:60, left:16, color:"#fff", fontSize:16, fontWeight:700, letterSpacing:2, zIndex:2, textShadow:"0 1px 3px rgba(0,0,0,0.5)", fontFamily:"monospace" },
-  expiryRow: { position:"absolute", bottom:30, left:16, display:"flex", alignItems:"flex-end", zIndex:2 },
-  expiryLabel: { color:"rgba(255,255,255,0.45)", fontSize:7, letterSpacing:0.5 },
-  expiryVal: { color:"#fff", fontSize:13, fontWeight:700, letterSpacing:1 },
-  holderRow: { position:"absolute", bottom:12, left:16, right:16, display:"flex", justifyContent:"space-between", alignItems:"center", zIndex:2 },
-  holder: { color:"#fff", fontSize:12, fontWeight:600, letterSpacing:1.5 },
-  visa: { color:"#fff", fontSize:22, fontWeight:900, fontFamily:"serif", fontStyle:"italic", textShadow:"0 2px 4px rgba(0,0,0,0.4)" },
-};
 
 const styles = {
-  root: { minHeight:"100vh", background:"#030712", color:"#f9fafb", fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif", maxWidth:420, margin:"0 auto", paddingBottom:80 },
-  header: { background:"#030712", padding:"20px 20px 12px", display:"flex", alignItems:"center", gap:12, borderBottom:"1px solid #111827" },
-  headerLogo: { fontSize:28 },
-  headerTitle: { fontSize:20, fontWeight:800, color:"#f9fafb", letterSpacing:-0.5 },
-  headerSub: { fontSize:12, color:"#6b7280" },
-  tabBar: { display:"flex", background:"#0f172a", borderBottom:"1px solid #1f2937", position:"sticky", top:0, zIndex:10 },
-  tabBtn: { flex:1, border:"none", background:"transparent", color:"#6b7280", padding:"10px 0", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:2, fontSize:18, transition:"color 0.2s" },
-  tabActive: { color:"#4ade80", borderBottom:"2px solid #4ade80" },
-  content: { padding:"16px 16px" },
-  balanceCard: { background:"linear-gradient(135deg,#064e3b 0%,#065f46 50%,#0f172a 100%)", borderRadius:16, padding:"20px", marginBottom:16, border:"1px solid #14532d", boxShadow:"0 8px 32px rgba(0,0,0,0.4)" },
-  balanceLabelTop: { color:"rgba(255,255,255,0.5)", fontSize:12, marginBottom:4 },
-  balanceAmount: { fontSize:34, fontWeight:900, color:"#fff", marginBottom:16, letterSpacing:-1 },
-  balanceRow: { display:"flex", alignItems:"center" },
-  balanceStat: { display:"flex", flexDirection:"column", gap:2 },
-  actionRow: { display:"flex", gap:12, marginBottom:20 },
-  actionBtnGreen: { flex:1, background:"#14532d", border:"1px solid #166534", color:"#4ade80", borderRadius:12, padding:"14px", display:"flex", flexDirection:"column", alignItems:"center", gap:4, cursor:"pointer", fontWeight:700, fontSize:14 },
-  actionBtnRed: { flex:1, background:"#450a0a", border:"1px solid #7f1d1d", color:"#f87171", borderRadius:12, padding:"14px", display:"flex", flexDirection:"column", alignItems:"center", gap:4, cursor:"pointer", fontWeight:700, fontSize:14 },
-  sectionTitle: { fontSize:15, fontWeight:700, color:"#9ca3af", marginBottom:10, marginTop:4, letterSpacing:0.5 },
-  empty: { color:"#4b5563", fontSize:14, textAlign:"center", padding:"24px 0" },
-  txRow: { display:"flex", alignItems:"center", gap:12, background:"#0f172a", borderRadius:12, padding:"12px", marginBottom:8, border:"1px solid #1f2937" },
-  txIcon: { width:40, height:40, borderRadius:10, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 },
-  txLabel: { color:"#f9fafb", fontSize:14, fontWeight:600 },
-  txMeta: { color:"#6b7280", fontSize:12, marginTop:2 },
-  microBtn: { background:"#1f2937", border:"none", borderRadius:6, padding:"3px 6px", cursor:"pointer", fontSize:12 },
-  microBtnRed: { background:"#450a0a", border:"none", borderRadius:6, padding:"3px 6px", cursor:"pointer", fontSize:12 },
-  cardBalanceBox: { background:"#0f172a", borderRadius:14, padding:"16px 20px", border:"1px solid #1f2937", width:"100%", textAlign:"center", boxSizing:"border-box" },
-  miniStat: { flex:1, background:"#0f172a", border:"1px solid #1f2937", borderRadius:12, padding:"12px", textAlign:"center" },
-  statsGrid: { display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:16 },
-  statBox: { background:"#0f172a", border:"1px solid #1f2937", borderRadius:12, padding:"12px" },
-  barBg: { height:8, background:"#1f2937", borderRadius:4, overflow:"hidden" },
-  barFill: { height:"100%", background:"linear-gradient(90deg,#dc2626,#f87171)", borderRadius:4, transition:"width 0.5s" },
-  compareBar: { height:16, background:"#1f2937", borderRadius:8, overflow:"hidden", display:"flex" },
-  compareSegSave: { background:"#16a34a", borderRadius:"8px 0 0 8px" },
-  compareSegSpend: { background:"#dc2626", borderRadius:"0 8px 8px 0" },
-  overlay: { position:"fixed", inset:0, background:"rgba(0,0,0,0.7)", display:"flex", alignItems:"flex-end", justifyContent:"center", zIndex:100 },
-  modal: { background:"#0f172a", border:"1px solid #1f2937", borderRadius:"20px 20px 0 0", padding:"20px", width:"100%", maxWidth:420 },
-  modalHeader: { display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 },
-  closeBtn: { background:"#1f2937", border:"none", color:"#9ca3af", borderRadius:8, padding:"6px 10px", cursor:"pointer", fontSize:14 },
-  input: { width:"100%", background:"#1f2937", border:"1px solid #374151", color:"#f9fafb", borderRadius:10, padding:"12px", fontSize:15, marginBottom:10, boxSizing:"border-box", outline:"none" },
-  btnGreen: { width:"100%", background:"#16a34a", border:"none", color:"#fff", borderRadius:10, padding:"14px", fontSize:15, fontWeight:700, cursor:"pointer" },
-  btnRed: { width:"100%", background:"#dc2626", border:"none", color:"#fff", borderRadius:10, padding:"14px", fontSize:15, fontWeight:700, cursor:"pointer" },
+  root:{minHeight:"100vh",background:"#030712",color:"#f9fafb",fontFamily:"-apple-system,sans-serif",maxWidth:420,margin:"0 auto",paddingBottom:80},
+  header:{background:"#030712",padding:"20px 20px 12px",display:"flex",alignItems:"center",gap:12,borderBottom:"1px solid #111827"},
+  htitle:{fontSize:20,fontWeight:800,color:"#f9fafb",letterSpacing:-0.5},
+  hsub:{fontSize:12,color:"#6b7280"},
+  tabs:{display:"flex",background:"#0f172a",borderBottom:"1px solid #1f2937",position:"sticky",top:0,zIndex:10},
+  tab:{flex:1,border:"none",background:"transparent",color:"#6b7280",padding:"10px 0",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,fontSize:18},
+  tabOn:{color:"#4ade80",borderBottom:"2px solid #4ade80"},
+  body:{padding:"16px"},
+  balCard:{background:"linear-gradient(135deg,#064e3b,#065f46,#0f172a)",borderRadius:16,padding:20,marginBottom:16,border:"1px solid #14532d"},
+  btnG:{flex:1,background:"#14532d",border:"1px solid #166534",color:"#4ade80",borderRadius:12,padding:14,display:"flex",flexDirection:"column",alignItems:"center",gap:4,cursor:"pointer",fontWeight:700,fontSize:14},
+  btnR:{flex:1,background:"#450a0a",border:"1px solid #7f1d1d",color:"#f87171",borderRadius:12,padding:14,display:"flex",flexDirection:"column",alignItems:"center",gap:4,cursor:"pointer",fontWeight:700,fontSize:14},
+  secTitle:{fontSize:15,fontWeight:700,color:"#9ca3af",marginBottom:10,letterSpacing:0.5},
+  txRow:{display:"flex",alignItems:"center",gap:12,background:"#0f172a",borderRadius:12,padding:12,marginBottom:8,border:"1px solid #1f2937"},
+  txIcon:{width:40,height:40,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18},
+  micro:{background:"#1f2937",border:"none",borderRadius:6,padding:"3px 6px",cursor:"pointer",fontSize:12},
+  microR:{background:"#450a0a",border:"none",borderRadius:6,padding:"3px 6px",cursor:"pointer",fontSize:12},
+  card:{width:320,height:200,borderRadius:16,position:"relative",overflow:"hidden",boxShadow:"0 20px 60px rgba(0,0,0,0.7)"},
+  cardBg:{position:"absolute",inset:0,background:"#0a0f0a"},
+  cardFan:{position:"absolute",right:-20,top:-20,width:240,height:260,background:"radial-gradient(ellipse at 80% 30%,#16a34a,#15803d 25%,#052e16 60%,transparent 80%)",transform:"rotate(-10deg)"},
+  chip:{width:38,height:28,borderRadius:4,background:"linear-gradient(135deg,#d4a843,#f5d078 40%,#c8962a)",display:"flex",alignItems:"center",justifyContent:"center"},
+  chipIn:{width:28,height:20,borderRadius:2,border:"1px solid rgba(180,130,0,0.5)",background:"linear-gradient(135deg,#c8962a,#e8c060)"},
+  mini:{flex:1,background:"#0f172a",border:"1px solid #1f2937",borderRadius:12,padding:12,textAlign:"center"},
+  statBox:{background:"#0f172a",border:"1px solid #1f2937",borderRadius:12,padding:12},
+  overlay:{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:100},
+  modal:{background:"#0f172a",border:"1px solid #1f2937",borderRadius:"20px 20px 0 0",padding:20,width:"100%",maxWidth:420},
+  inp:{width:"100%",background:"#1f2937",border:"1px solid #374151",color:"#f9fafb",borderRadius:10,padding:12,fontSize:15,marginBottom:10,boxSizing:"border-box",outline:"none"},
 };
